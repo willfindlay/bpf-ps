@@ -16,7 +16,13 @@ class BPFProgram:
         with open(os.path.join(defs.project_path, 'src/bpf/bpf_program.c'), 'r') as f:
             text = f.read()
 
-        self.bpf = BPF(text=text, cflags=[f'-I{defs.project_path}'])
+        flags = []
+        if self.args.since_start:
+            flags.append('-DSINCE_START')
+        # Include project path for finding headers
+        flags.append('-I{defs.project_path}')
+
+        self.bpf = BPF(text=text, cflags=flags)
 
     def print_header(self):
         header = f"{'COMM':16} {'PID':>8} {'TID':>8}"

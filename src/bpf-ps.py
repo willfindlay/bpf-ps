@@ -25,6 +25,9 @@ def parse_args(args=sys.argv[1:]):
     parser.add_argument("--printk", action="store_true",
             help="Print output from bpf_trace_printk (for debugging purposes).")
 
+    parser.add_argument("--since-start", dest='since_start', action="store_true",
+            help="Only care about processes/threads that either execve or spawn after running bpf-ps.")
+
     args = parser.parse_args(args)
 
     # Check UID
