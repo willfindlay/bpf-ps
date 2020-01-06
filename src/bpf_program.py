@@ -1,5 +1,6 @@
 import os, sys
 import time
+import curses
 
 from bcc import BPF
 
@@ -35,13 +36,28 @@ class BPFProgram:
             info = f"{v.comm.decode('utf-8'):16} {v.pid:8} {v.tid:8}"
             print(info)
 
-    def main(self):
-        self.load_bpf_program()
+    def event_loop(self, screen):
+        k = 0
+        cursor_x = 0
+        cursor_y = 0
 
-        while True:
+        screen.clear()
+        screen.refresh()
+        #curses.start_color()
+
+        while ord(k) != 'q':
             time.sleep(defs.sleep)
+
+            screen.clear()
             if self.args.printk:
                 self.bpf.trace_print()
             #self.bpf.perf_buffer_poll(30)
             self.print_header()
             self.print_processes()
+
+            screen.refresh()
+
+    def main(self):
+        self.load_bpf_program()
+        curses.wrapper(self.event_loop)
+
