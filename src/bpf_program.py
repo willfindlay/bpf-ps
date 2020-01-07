@@ -1,17 +1,28 @@
 import os, sys
 import time
-import curses
+import atexit
+import signal
 
 from bcc import BPF
 
 import defs
 
 class BPFProgram:
+    """
+    Class to help manage BPF program.
+    Includes various helper functions to be invoked by control class.
+    """
     def __init__(self, args):
         self.args = args
         self.bpf = None
 
+        self.load_bpf_program()
+        self.register_exit_hooks()
+
     def load_bpf_program(self):
+        """
+        Load BPF program and set self.bpf to that program.
+        """
         assert self.bpf is None
 
         with open(os.path.join(defs.project_path, 'src/bpf/bpf_program.c'), 'r') as f:
@@ -25,39 +36,44 @@ class BPFProgram:
 
         self.bpf = BPF(text=text, cflags=flags)
 
-    def print_header(self):
-        header = f"{'COMM':16} {'PID':>8} {'TID':>8}"
-        print(header)
+    def get_header(self):
+        """
+        Return the header for process output.
+        """
+        return f"{'COMM':16} {'PID':>8} {'TID':>8}"
 
-    def print_processes(self):
-        processes = self.bpf["processes"].iteritems()
-        processes = sorted(processes, key=lambda item: item[1].pid)
-        for k,v in processes:
-            info = f"{v.comm.decode('utf-8'):16} {v.pid:8} {v.tid:8}"
-            print(info)
+    def get_process_info(self, sort_key='pid'):
+        """
+        Return a list of formatted process info for output.
+        """
+        processes = self.bpf["processes"].itervalues()
+        if sort_key and sort_key != 'comm':
+            processes = sorted(processes, key=lambda item: item.__getattribute__(sort_key))
+        elif sort_key == 'comm':
+            processes = sorted(processes, key=lambda item: item.comm.decode('utf-8'))
+        process_info = []
+        for p in processes:
+            process_info.append(f"{p.comm.decode('utf-8'):16} {p.pid:8} {p.tid:8}")
+        return process_info
 
-    def event_loop(self, screen):
-        k = 0
-        cursor_x = 0
-        cursor_y = 0
+    def cleanup(self):
+        """
+        Any cleanup will go here later.
+        """
+        pass
 
-        screen.clear()
-        screen.refresh()
-        #curses.start_color()
+    def register_exit_hooks(self):
+        """
+        Handle signals gracefully and register cleanup hook.
+        """
+        signal.signal(signal.SIGTERM, lambda x, y: sys.exit(0))
+        signal.signal(signal.SIGINT, lambda x, y: sys.exit(0))
+        atexit.register(self.cleanup)
 
-        while ord(k) != 'q':
-            time.sleep(defs.sleep)
-
-            screen.clear()
-            if self.args.printk:
-                self.bpf.trace_print()
-            #self.bpf.perf_buffer_poll(30)
-            self.print_header()
-            self.print_processes()
-
-            screen.refresh()
-
-    def main(self):
-        self.load_bpf_program()
-        curses.wrapper(self.event_loop)
-
+    def on_tick(self):
+        """
+        Run this on every tick in control class.
+        """
+        if self.args.printk:
+            self.bpf.trace_print()
+        self.bpf.perf_buffer_poll(30)

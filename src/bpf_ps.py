@@ -3,7 +3,7 @@
 import os, sys
 import argparse
 
-from bpf_program import BPFProgram
+from front_end import CursesFrontEnd
 
 DESCRIPTION="""
 A reimplentation of ps in eBPF.
@@ -15,9 +15,15 @@ The motivation of this project is to understand tracking process lifespan in eBP
 """
 
 def is_root():
+    """
+    Check if the euid is root.
+    """
     return os.geteuid() == 0
 
 def parse_args(args=sys.argv[1:]):
+    """
+    Use argparse to parse system arguments.
+    """
     parser = argparse.ArgumentParser(prog="bpf-ps", description=DESCRIPTION,
             epilog=EPILOG, formatter_class=argparse.RawDescriptionHelpFormatter)
 
@@ -38,5 +44,5 @@ def parse_args(args=sys.argv[1:]):
 
 if __name__ == '__main__':
     args = parse_args()
-    prog = BPFProgram(args)
-    prog.main()
+    app = CursesFrontEnd(args)
+    app.main()
